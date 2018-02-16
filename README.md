@@ -23,4 +23,5 @@ This application allows the user to query a youtube playlist and extract video i
 ![Extracted Video IDs from the YouTube API](https://i.imgur.com/0zvsu0V.png)
 
 
-
+## Requirements
+This programm requires the [JRE 8 and later versions](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html).
