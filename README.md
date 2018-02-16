@@ -2,6 +2,12 @@
 This application allows the user to query a youtube playlist and extract video ids from it. This includes the extraction of videos that are not already downloaded to your computer, as well as extraction all video ids in the playlist and a way to rename videos on your computer to match the current playlist index and title of the video.
 
 
+## How to use:
+1. Open the programm and enter the playlist id.
+2. The programm is now going to query the api and present you with the results.
+3. Depending on what you want to do now you can select a save path for saving the video ids or finding the video files on your computer.
+4. Click on one of the buttons that does whatever it is that you want to be done by the app.
+
 ## Screenshots:
 
 ### Default Setup
