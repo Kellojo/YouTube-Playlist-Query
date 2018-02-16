@@ -8,6 +8,8 @@ This application allows the user to query a youtube playlist and extract video i
 3. Depending on what you want to do now you can select a save path for saving the video ids or finding the video files on your computer.
 4. Click on one of the buttons that does whatever it is that you want to be done by the app.
 
+![How to use](https://i.imgur.com/8URD4iZ.gifv)
+
 ## Screenshots:
 
 ### Default Setup
