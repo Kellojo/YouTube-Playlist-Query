@@ -6,6 +6,9 @@ This application allows the user to query a youtube playlist and extract video i
 - Save all YouTube video ids that are not downloaded to your computer to a .txt file
 - Rename video files on your computer to match the current video title and add the index of the video in the playlist as prefix to it
 
+## Download
+**Downlod the "YouTube Playlist Query.jar".**
+
 ## How to use:
 1. Open the programm and enter the playlist id.
 2. The programm is now going to query the api and present you with the results.
