@@ -2,6 +2,8 @@ import java.io.File;
 import java.util.List;
 
 import Utility.FileWriter;
+import Utility.FilenameFormatParser;
+import Utility.Format;
 import Youtube.Playlist;
 import Youtube.Video;
 import javafx.concurrent.Task;
@@ -9,9 +11,11 @@ import javafx.concurrent.Task;
 public class MusicRenamer extends Task<Object> {
 	
 	private Playlist playlist;
+	private Format fileNameFormat;
 	
-	public MusicRenamer(Playlist playlist) {
+	public MusicRenamer(Playlist playlist, Format fileNameFormat) {
 		this.playlist = playlist;
+		this.fileNameFormat = fileNameFormat;
 	}
 	
 	/* Add playlist index to the files */
@@ -35,8 +39,7 @@ public class MusicRenamer extends Task<Object> {
 			extension = extension.replace(".", "");
 			extension = "." + extension;
 			
-			
-			String finalName = String.format("%0" + leadingZeros + "d", video.getPositionInPlaylist()) + " - " + video.getTitle() + extension;
+			String finalName = FilenameFormatParser.getFileName(fileNameFormat, video, leadingZeros) + extension;
 			fileOnDisk.renameTo(new File(fileOnDisk.getParentFile().getAbsolutePath() + "\\" + finalName));
 		}
 		

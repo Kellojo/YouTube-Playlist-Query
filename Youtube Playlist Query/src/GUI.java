@@ -2,6 +2,7 @@ import java.io.File;
 
 import Runnables.PlaylistListViewFillerRunnable;
 import Runnables.PlaylistQueryRunnable;
+import Utility.Format;
 import Utility.GuiUtility;
 import Utility.VideoListCell;
 import Youtube.Playlist;
@@ -14,6 +15,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
@@ -34,6 +36,7 @@ public class GUI {
 	public static final String author = "Kellojo";
 	public static final String appName = "YouTube Playlist Query";
 	public static final String defaultFont = "Roboto";
+	public static final String version = "v1.1";
 	public static final int appWidth = 700;
 	public static final int appHeight = 400;
 	
@@ -49,18 +52,21 @@ public class GUI {
 	private ListView<Video> lv_videos;
 	private TextField tf_PlaylistID;
 	private TextField tf_APIKey;
+	private ComboBox<Format> cb_FileFormat;
 	
 	private Button btn_ExtractVideos;
 	private Button btn_renameVideos;
 	private Button btn_ExtractMissingVideos;
 	
 	private ProgressBar pb_status;
+	private boolean isInProgress = false;
 	
+
 	public GUI() {
 		primaryStage = new Stage();
 		
 		BorderPane bp = buildGUI();
-		primaryStage.setTitle(appName + " by " + author);
+		primaryStage.setTitle(appName + " by " + author + " (" + version + ")");
 		primaryStage.setScene(new Scene( bp, appWidth, appHeight));
 		primaryStage.show();
 	}
@@ -140,7 +146,7 @@ public class GUI {
 						DirectoryChooser directoryChooser = new DirectoryChooser();
 		                File selectedDirectory = directoryChooser.showDialog(primaryStage);
 		                
-		                if(selectedDirectory == null){
+		                if(selectedDirectory == null && path.trim().equals("")){
 		                	lbl_curPath.setText("No Directory selected");
 		                	path = "";
 		                }else{
@@ -151,6 +157,26 @@ public class GUI {
 					}
 				}
 			});
+			
+			Label lbl_FileFormat = new Label("Rename format: ");
+			GridPane.setHgrow( lbl_FileFormat, Priority.ALWAYS);
+			gp.add( lbl_FileFormat, 0, 3);
+			
+			cb_FileFormat = new ComboBox<Format>();
+			cb_FileFormat.setTooltip(new Tooltip("Select the format that fits your needs. This format is applied to the files when you click the 'Rename Videos in Folder (adds Playlist Index)' button."));
+			cb_FileFormat.getItems().addAll(
+				new Format("%PIND - %T", "'Playlist Index' - 'Title'"),
+				new Format("%T - %PIND", "'Title' - 'Playlist Index'"),
+				new Format("%ID", "'Video id'"),
+				new Format("%PIND - %ID", "'Playlist Index' - 'Video id'"),
+				new Format("%ID - %CID", "'Video id' - 'Chanel id'"),
+				new Format("%PIND - %ID - %CID", "'Playlist Index' - 'Video id' - 'Chanel id'")
+			);
+			
+			cb_FileFormat.getSelectionModel().select(0);
+			GridPane.setColumnSpan(cb_FileFormat, 2);
+			GuiUtility.SetNodeToFillGridPaneHorizontally( cb_FileFormat);
+			gp.add(cb_FileFormat, 1, 3);
 			
 			btn_ExtractVideos = new Button("Save Video IDs");
 			btn_ExtractVideos.setTooltip(new Tooltip("Save all video ids in this playlist to the selected path."));
@@ -163,7 +189,7 @@ public class GUI {
 				}
 			});
 			GuiUtility.SetNodeToFillGridPaneHorizontally( btn_ExtractVideos);
-			gp.add(btn_ExtractVideos, 0, 3);
+			gp.add(btn_ExtractVideos, 0, 4);
 			
 			btn_ExtractMissingVideos = new Button("Save Missing Video IDs");
 			btn_ExtractMissingVideos.setTooltip(new Tooltip("Save all video ids in this playlist to the selected path that are not already downloaded to the selected path."));
@@ -176,7 +202,7 @@ public class GUI {
 				}
 			});
 			GuiUtility.SetNodeToFillGridPaneHorizontally( btn_ExtractMissingVideos);
-			gp.add(btn_ExtractMissingVideos, 0, 4);
+			gp.add(btn_ExtractMissingVideos, 0, 5);
 			
 			btn_renameVideos = new Button("Rename Videos in Folder (adds Playlist Index)");
 			btn_renameVideos.setTooltip(new Tooltip("Rename all videos in the given path to this format: '*playlist index* - *video title*', that are in the given playlist. In order for this to work you have to select a path where videos of this playlist are located in."));
@@ -189,12 +215,12 @@ public class GUI {
 				}
 			});
 			GuiUtility.SetNodeToFillGridPaneHorizontally(btn_renameVideos);
-			gp.add(btn_renameVideos, 0, 5);
+			gp.add(btn_renameVideos, 0, 6);
 			
 			
 			pb_status = new ProgressBar();
 			GuiUtility.SetNodeToFillGridPaneHorizontally(pb_status);
-			gp.add(pb_status, 0, 6);
+			gp.add(pb_status, 0, 7);
 			
 			
 			GuiUtility.AddMarginToAllGridPaneChildren(gp, insets_half_trbl);
@@ -215,41 +241,36 @@ public class GUI {
 		return bp;
 	}
 	
-	/* Applies the progress and text to the status indicators */
-	private void startUpdateTimeline() {
-		Timeline fiveSecondsWonder = new Timeline(new KeyFrame(Duration.millis(100), new EventHandler<ActionEvent>() {
-		    @Override
-		    public void handle(ActionEvent event) {
-				refreshUI();
-		    }
-		}));
-		fiveSecondsWonder.setCycleCount(Timeline.INDEFINITE);
-		fiveSecondsWonder.play();
-	}
-	
 	/* Tries to start the query if all params are correctly given/not empty */
 	private void tryVIWStart() {
-		if (path != "" && currentPlaylist != null) {
-			/* Query Playlist */
-			VideoIDWriter viw = new VideoIDWriter(currentPlaylist, path);
+		if (path == "" && currentPlaylist == null || isInProgress) {
 			
-			pb_status.progressProperty().bind(viw.progressProperty());
-			pb_status.progressProperty().unbind();
-			pb_status.setProgress(0);
-			viw.setOnSucceeded(e -> {
-				pb_status.progressProperty().unbind();
-				pb_status.setProgress(1);
-				pb_status.setDisable(false);
-			});
-			
-			Thread t = new Thread(viw);
-			t.start();
 		}
+		
+		/* Query Playlist */
+		VideoIDWriter viw = new VideoIDWriter(currentPlaylist, path);
+		isInProgress = true;
+		
+		pb_status.progressProperty().bind(viw.progressProperty());
+		pb_status.progressProperty().unbind();
+		pb_status.setProgress(0);
+		viw.setOnSucceeded(e -> {
+			pb_status.progressProperty().unbind();
+			pb_status.setProgress(1);
+			pb_status.setDisable(false);
+			isInProgress = false;
+		});
+		
+		Thread t = new Thread(viw);
+		t.start();
 	}
 	/* Tries to start the query if all params are correctly given/not empty */
 	private void tryMusicRenamerStart() {
-		if (currentPlaylist != null) {
-			MusicRenamer mr = new MusicRenamer(currentPlaylist);
+		if (currentPlaylist == null || isInProgress) {
+			return;
+		}
+			MusicRenamer mr = new MusicRenamer(currentPlaylist, cb_FileFormat.getValue());
+			isInProgress = true;
 			
 			pb_status.progressProperty().bind(mr.progressProperty());
 			pb_status.progressProperty().unbind();
@@ -258,31 +279,86 @@ public class GUI {
 				pb_status.progressProperty().unbind();
 				pb_status.setProgress(1);
 				pb_status.setDisable(false);
+				isInProgress = false;
+				tryVideoFileQuery();
 			});
 			
 			Thread t = new Thread(mr);
 			t.start();
-		}
 	}
 	/* Tries to start the query if all params are correctly given/not empty */
 	private void tryMissingVideoWriterStart() {
-		System.out.println((path != "" && currentPlaylist != null));
+		if (path == "" && currentPlaylist == null || isInProgress) {
+			return;
+		}	
 		
-		if (path != "" && currentPlaylist != null) {
-			MissingVideoIDWriter mviw = new MissingVideoIDWriter(currentPlaylist, path);
-			
-			pb_status.progressProperty().bind(mviw.progressProperty());
+		MissingVideoIDWriter mviw = new MissingVideoIDWriter(currentPlaylist, path);
+		isInProgress = true;
+		
+		pb_status.progressProperty().bind(mviw.progressProperty());
+		pb_status.progressProperty().unbind();
+		pb_status.setProgress(0);
+		mviw.setOnSucceeded(e -> {
 			pb_status.progressProperty().unbind();
-			pb_status.setProgress(0);
-			mviw.setOnSucceeded(e -> {
-				pb_status.progressProperty().unbind();
-				pb_status.setProgress(1);
-				pb_status.setDisable(false);
-			});
-			
-			Thread t = new Thread(mviw);
-			t.start();
+			pb_status.setProgress(1);
+			pb_status.setDisable(false);
+			isInProgress = false;
+		});
+		
+		Thread t = new Thread(mviw);
+		t.start();
+	}
+	/* tries to query the selected directory on disk for videos in the selected playlist */
+	private void tryVideoFileQuery() {
+		if (APIKey == null || currentPlaylist == null || isInProgress) {
+			return;
 		}
+		if (path.trim().equals("") || !APIKey.isValid() || !currentPlaylist.isValidated()) {
+			return;
+		}
+		
+		File dir = new File(path);
+		currentPlaylist.FindVideosOnDisk(dir);
+		
+		//update list view to show the found paths too
+		lv_videos.getItems().clear();
+		PlaylistListViewFillerRunnable plwfr = new PlaylistListViewFillerRunnable( currentPlaylist, lv_videos.getItems());
+		isInProgress = true;
+		
+		pb_status.progressProperty().bind(plwfr.progressProperty());
+		pb_status.progressProperty().unbind();
+		pb_status.setProgress(0);
+		plwfr.setOnSucceeded(e -> {
+			pb_status.progressProperty().unbind();
+			pb_status.setProgress(1);
+			pb_status.setDisable(false);
+			isInProgress = false;
+		});
+		
+		Thread t = new Thread(plwfr);
+		t.start();
+	}
+	/* Fills the listView with the videos of the given playlist/api key */
+	private void FillListViewWithVideos(Playlist playlist, YouTubeAPIKey APIKey) {
+		if (!playlist.isValidated()) 
+			return;
+		
+		lv_videos.getItems().clear();
+		PlaylistQueryRunnable pqr = new PlaylistQueryRunnable(APIKey, playlist, lv_videos.getItems(), true);
+		isInProgress = true;
+		
+		pb_status.progressProperty().bind(pqr.progressProperty());
+		pb_status.progressProperty().unbind();
+		pb_status.setProgress(0);
+		pqr.setOnSucceeded(e -> {
+			pb_status.progressProperty().unbind();
+			pb_status.setProgress(1);
+			pb_status.setDisable(false);
+			isInProgress = false;
+		});
+		
+		Thread t = new Thread(pqr);
+		t.start();
 	}
 	
 	
@@ -313,56 +389,18 @@ public class GUI {
 		}
 	}
 	
-	/* tries to query the selected directory on disk for videos in the selected playlist */
-	private void tryVideoFileQuery() {
-		if (APIKey == null || currentPlaylist == null) {
-			return;
-		}
-		if (path.trim().equals("") || !APIKey.isValid() || !currentPlaylist.isValidated()) {
-			return;
-		}
-		
-		File dir = new File(path);
-		currentPlaylist.FindVideosOnDisk(dir);
-		
-		//update list view to show the found paths too
-		lv_videos.getItems().clear();
-		PlaylistListViewFillerRunnable plwfr = new PlaylistListViewFillerRunnable( currentPlaylist, lv_videos.getItems());
-		
-		pb_status.progressProperty().bind(plwfr.progressProperty());
-		pb_status.progressProperty().unbind();
-		pb_status.setProgress(0);
-		plwfr.setOnSucceeded(e -> {
-			pb_status.progressProperty().unbind();
-			pb_status.setProgress(1);
-			pb_status.setDisable(false);
-		});
-		
-		Thread t = new Thread(plwfr);
-		t.start();
-	}
 	
-	/* Fills the listView with the videos of the given playlist/api key */
-	private void FillListViewWithVideos(Playlist playlist, YouTubeAPIKey APIKey) {
-		if (!playlist.isValidated()) 
-			return;
-		
-		lv_videos.getItems().clear();
-		PlaylistQueryRunnable pqr = new PlaylistQueryRunnable(APIKey, playlist, lv_videos.getItems(), true);
-		
-		pb_status.progressProperty().bind(pqr.progressProperty());
-		pb_status.progressProperty().unbind();
-		pb_status.setProgress(0);
-		pqr.setOnSucceeded(e -> {
-			pb_status.progressProperty().unbind();
-			pb_status.setProgress(1);
-			pb_status.setDisable(false);
-		});
-		
-		Thread t = new Thread(pqr);
-		t.start();
+	/* Applies the progress and text to the status indicators */
+	private void startUpdateTimeline() {
+		Timeline fiveSecondsWonder = new Timeline(new KeyFrame(Duration.millis(100), new EventHandler<ActionEvent>() {
+		    @Override
+		    public void handle(ActionEvent event) {
+				refreshUI();
+		    }
+		}));
+		fiveSecondsWonder.setCycleCount(Timeline.INDEFINITE);
+		fiveSecondsWonder.play();
 	}
-	
 	/* Refreshes the ui to show the info of the current playlist and displays loading info while fetching playlist data*/
 	private void refreshUI() {
 		if (currentPlaylist != null) {
@@ -375,17 +413,19 @@ public class GUI {
 			lbl_heading.setText(appName);
 		}
 		
-		//we got a valid playlist and a valid path. Allow the buttons to be pressable!
-		if (currentPlaylist != null && !path.trim().equals("")) {
-			btn_ExtractVideos.setDisable(false);
-			btn_renameVideos.setDisable(false);
-			btn_ExtractMissingVideos.setDisable(false);
+		//we got a valid playlist and a valid path or are currently proceccing something. Allow the buttons to be pressable!
+		if (currentPlaylist == null || path.trim().equals("") || isInProgress) {
+			SetDisableForActions(true);
 		} else {
-			btn_ExtractVideos.setDisable(true);
-			btn_renameVideos.setDisable(true);
-			btn_ExtractMissingVideos.setDisable(true);
+			SetDisableForActions(false);
 		}
 	}
-
-
+	/* Sets the disabled property for all buttons that perorm a certain action that should not be done in paralell */
+	private void SetDisableForActions(boolean isDisables) {
+		btn_ExtractVideos.setDisable(isDisables);
+		btn_renameVideos.setDisable(isDisables);
+		btn_ExtractMissingVideos.setDisable(isDisables);
+	}
 }
+
+
