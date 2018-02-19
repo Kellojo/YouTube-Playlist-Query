@@ -33,4 +33,4 @@ This application allows the user to query a youtube playlist and extract video i
 
 
 ## Requirements
-This programm requires the [JRE 8 and later versions](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html).
+This programm requires the [JRE 8 and later versions](https://www.oracle.com/technetwork/java/javase/downloads/jdk9-downloads-3848520.html).
