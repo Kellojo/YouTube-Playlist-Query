@@ -1,7 +1,4 @@
 # ignore eclipse project files
 .project
 .classpath
-/Runnables/
-/Utility/
-/Youtube/
 /org/
