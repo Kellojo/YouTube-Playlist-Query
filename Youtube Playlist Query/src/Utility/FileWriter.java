@@ -31,4 +31,9 @@ public class FileWriter {
 		int dot = path.lastIndexOf(".");
 	    return path.substring(dot + 1);
     }
+	
+	/* Removes chars from the filename that are not allowed */
+	public static String removeNotAllowedCharsFromFilename(String filename) {
+		return filename.replaceAll("[\\\\/:*?\"<>|]", "");
+	}
 }

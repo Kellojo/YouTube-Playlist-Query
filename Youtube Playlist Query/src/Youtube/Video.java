@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
+import Utility.FileWriter;
+
 public class Video {
 	private String videoID = "none";
 	private String title = "none";
@@ -36,14 +38,13 @@ public class Video {
 	/* Finds the video on disk given a directory to search in */
 	public void FindVideoOnDisk(File directory) {
 		List<File> directoryContents = Arrays.asList(directory.listFiles());
+		String videoName = FileWriter.removeNotAllowedCharsFromFilename(title).toLowerCase();
 		
 		videoOnDisk = null;
 		for (File file : directoryContents) {
 			
 			String fileName = file.getName().toLowerCase();
-			String vTitle = title.toLowerCase();
-
-			if (fileName.contains(vTitle) || file.getName().contains(videoID)) {
+			if (fileName.contains(videoName) || file.getName().contains(videoID)) {
 				this.videoOnDisk = file;
 				return;
 			}

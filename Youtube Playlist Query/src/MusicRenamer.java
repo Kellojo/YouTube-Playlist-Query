@@ -32,15 +32,31 @@ public class MusicRenamer extends Task<Object> {
 				continue;
 			}
 			
-			//Some funky code to make sure we get the right extension even when we dont have one or have a lot of dots in out extension
+			//Some funky code to make sure we get the right extension even when we don't have one or have a lot of dots in our extension
 			String extension = FileWriter.getFileExtension(fileOnDisk);
 			if (extension.trim().equals("") || extension.length() > 10)
 				extension = "mp3";
 			extension = extension.replace(".", "");
 			extension = "." + extension;
 			
+			//get final file name
 			String finalName = FilenameFormatParser.getFileName(fileNameFormat, video, leadingZeros) + extension;
-			fileOnDisk.renameTo(new File(fileOnDisk.getParentFile().getAbsolutePath() + "\\" + finalName));
+			//remove unwanted chars from filename
+			finalName = FileWriter.removeNotAllowedCharsFromFilename(finalName);
+			
+			//rename file
+			File destination = new File(fileOnDisk.getParentFile().getAbsolutePath() + "\\" + finalName);
+			
+			//check if the operation was successfull
+			boolean isSuccess = fileOnDisk.renameTo(destination);
+			if (!isSuccess) {
+				System.err.println("File '" + fileOnDisk + "' could not be renamed to file '" + destination + "'.");
+				
+				//delete file if it already exists
+				if (destination.exists()) {
+					fileOnDisk.delete();
+				}
+			}
 		}
 		
 	}
