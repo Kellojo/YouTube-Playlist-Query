@@ -21,6 +21,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -68,6 +69,7 @@ public class GUI {
 		BorderPane bp = buildGUI();
 		primaryStage.setTitle(appName + " by " + author + " (" + version + ")");
 		primaryStage.setScene(new Scene( bp, appWidth, appHeight));
+		primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("Save.png")));
 		primaryStage.show();
 	}
 
