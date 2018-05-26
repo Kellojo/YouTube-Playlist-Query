@@ -39,7 +39,7 @@ public class GUI {
 	public static final String author = "Kellojo";
 	public static final String appName = "YouTube Playlist Query";
 	public static final String defaultFont = "Roboto";
-	public static final String version = "v1.1";
+	public static final String version = "v3.0";
 	public static final int appWidth = 700;
 	public static final int appHeight = 400;
 
