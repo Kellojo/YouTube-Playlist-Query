@@ -1,4 +1,5 @@
 import java.io.File;
+import java.util.List;
 
 import Runnables.PlaylistListViewFillerRunnable;
 import Runnables.PlaylistQueryRunnable;
@@ -8,6 +9,7 @@ import Utility.VideoListCell;
 import Youtube.Playlist;
 import Youtube.Video;
 import Youtube.YouTubeAPIKey;
+import Youtube.YoutubeUtility;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
@@ -186,7 +188,7 @@ public class GUI {
 				@Override
 				public void handle(ActionEvent event) {
 					if (event.getEventType().toString().equals("ACTION")) {
-						tryVIWStart();
+						showVideoIDPopup();
 					}
 				}
 			});
@@ -199,7 +201,7 @@ public class GUI {
 				@Override
 				public void handle(ActionEvent event) {
 					if (event.getEventType().toString().equals("ACTION")) {
-						 tryMissingVideoWriterStart();
+						showMissingVideoPopup();
 					}
 				}
 			});
@@ -243,38 +245,7 @@ public class GUI {
 		return bp;
 	}
 
-	/* Tries to start the query if all params are correctly given/not empty */
-	private void tryVIWStart() {
-		if (path == "" && currentPlaylist == null || isInProgress) {
-			return;
-		}
-		
-		//get directory to save results to
-		DirectoryChooser directoryChooser = new DirectoryChooser();
-		File selectedDirectory = directoryChooser.showDialog(primaryStage);
 
-		//return if path is invalid
-		if(selectedDirectory == null || !selectedDirectory.exists()){
-			return;
-		}
-
-		/* Query Playlist */
-		VideoIDWriter viw = new VideoIDWriter(currentPlaylist, selectedDirectory.getPath());
-		isInProgress = true;
-
-		pb_status.progressProperty().bind(viw.progressProperty());
-		pb_status.progressProperty().unbind();
-		pb_status.setProgress(0);
-		viw.setOnSucceeded(e -> {
-			pb_status.progressProperty().unbind();
-			pb_status.setProgress(1);
-			pb_status.setDisable(false);
-			isInProgress = false;
-		});
-
-		Thread t = new Thread(viw);
-		t.start();
-	}
 	/* Tries to start the query if all params are correctly given/not empty */
 	private void tryMusicRenamerStart() {
 		if (currentPlaylist == null || isInProgress) {
@@ -297,37 +268,19 @@ public class GUI {
 			Thread t = new Thread(mr);
 			t.start();
 	}
-	/* Tries to start the query if all params are correctly given/not empty */
-	private void tryMissingVideoWriterStart() {
-		if (currentPlaylist == null || isInProgress) {
-			return;
-		}
+	
 
-		//get directory to save results to
-		DirectoryChooser directoryChooser = new DirectoryChooser();
-		File selectedDirectory = directoryChooser.showDialog(primaryStage);
-
-		//return if path is invalid
-		if(selectedDirectory == null || !selectedDirectory.exists()){
-			return;
-		}
-
-		MissingVideoIDWriter mviw = new MissingVideoIDWriter(currentPlaylist, selectedDirectory.getPath());
-		isInProgress = true;
-
-		pb_status.progressProperty().bind(mviw.progressProperty());
-		pb_status.progressProperty().unbind();
-		pb_status.setProgress(0);
-		mviw.setOnSucceeded(e -> {
-			pb_status.progressProperty().unbind();
-			pb_status.setProgress(1);
-			pb_status.setDisable(false);
-			isInProgress = false;
-		});
-
-		Thread t = new Thread(mviw);
-		t.start();
+	/* Show the popup with the missing video ids */
+	private void showMissingVideoPopup() {
+		List<String> missingVideos = YoutubeUtility.getMissingVideosOnDisk(currentPlaylist);
+		new TextPopup(primaryStage, missingVideos, currentPlaylist, "Missing Videos");
 	}
+	/* Show the popup with the missing video ids */
+	private void showVideoIDPopup() {
+		List<String> allVideos = YoutubeUtility.getVideoIDs(currentPlaylist);
+		new TextPopup(primaryStage, allVideos, currentPlaylist, "All Video IDs");
+	}
+	
 	/* tries to query the selected directory on disk for videos in the selected playlist */
 	private void tryVideoFileQuery() {
 		if (APIKey == null || currentPlaylist == null || isInProgress) {
