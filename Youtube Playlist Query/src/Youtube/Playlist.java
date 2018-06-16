@@ -1,6 +1,7 @@
 package Youtube;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,7 +78,7 @@ public class Playlist {
 					JSONObject videoInfo = result.getJSONObject("snippet");
 					
 				    String videoID = videoInfo.getJSONObject("resourceId").getString("videoId");
-				    String videoTitle = videoInfo.getString("title");
+				    String videoTitle =  new String(videoInfo.getString("title").getBytes(), Charset.forName("UTF-8"));
 				    String publishedAt = videoInfo.getString("publishedAt");
 				    String channelId = videoInfo.getString("channelId");
 				    
