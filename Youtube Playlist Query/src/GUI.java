@@ -99,7 +99,7 @@ public class GUI {
 
 
 			Label lbl_PlaylistID = new Label("Playlist ID:");
-			GridPane.setHgrow(lbl_PlaylistID, Priority.SOMETIMES);
+			GridPane.setHgrow(lbl_PlaylistID, Priority.ALWAYS);
 			gp.add(lbl_PlaylistID, 0, 0);
 
 			tf_PlaylistID = new TextField();
@@ -114,9 +114,21 @@ public class GUI {
 			GridPane.setHgrow(tf_PlaylistID, Priority.ALWAYS);
 			tf_PlaylistID.setPadding(insets_half_trbl);
 			gp.add(tf_PlaylistID, 1, 0);
+			
+			Button btn_RefreshVideos = new Button("↻");
+			btn_RefreshVideos.setTooltip(new Tooltip("Requery the videos from the youtube api."));
+			gp.add(btn_RefreshVideos, 3, 0);
+			btn_RefreshVideos.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					if (event.getEventType().toString().equals("ACTION")) {
+						validateInput(tf_PlaylistID, tf_APIKey);
+					}
+				}
+			});
 
 			Label lbl_APIKey = new Label("YouTube API Key:");
-			GridPane.setHgrow(lbl_APIKey, Priority.SOMETIMES);
+			GridPane.setHgrow(lbl_APIKey, Priority.ALWAYS);
 			gp.add(lbl_APIKey, 0, 1);
 
 			tf_APIKey = new TextField("AIzaSyDSs6VwJdOUUyoSYN4ZZcd0PlzsHobqfDE");
@@ -129,9 +141,10 @@ public class GUI {
 			});
 			GridPane.setColumnSpan(tf_APIKey, 2);
 			GridPane.setHgrow(tf_APIKey, Priority.ALWAYS);
+			GuiUtility.SetNodeToFillGridPaneHorizontally(tf_APIKey);
 			tf_APIKey.setPadding(insets_half_trbl);
-			gp.add(tf_APIKey, 1, 1);
-
+			gp.add(tf_APIKey, 1, 1);		
+			
 			Label lbl_Path = new Label("Path:");
 			lbl_Path.setTooltip(new Tooltip("The path to save the ids or look for already downloaded videos."));
 			gp.add(lbl_Path, 0, 2);
@@ -162,6 +175,20 @@ public class GUI {
 				}
 			});
 
+			Button btn_RefreshFiles = new Button("↻");
+			btn_RefreshFiles.setTooltip(new Tooltip("Refresh the videos found on disk."));
+			gp.add(btn_RefreshFiles, 3, 2);
+			btn_RefreshFiles.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					if (event.getEventType().toString().equals("ACTION")) {
+						tryVideoFileQuery();
+					}
+				}
+			});
+
+			
+			
 			Label lbl_FileFormat = new Label("Rename format: ");
 			GridPane.setHgrow( lbl_FileFormat, Priority.ALWAYS);
 			gp.add( lbl_FileFormat, 0, 3);
