@@ -31,7 +31,11 @@ public class PlaylistListViewFillerRunnable extends Task<Object> {
 		int videoCount = videos.size();
 		
 		for (Video v : videos) {
-			listView.add(v);
+			try {
+				listView.add(v);
+			} catch(IllegalStateException e) {
+				//catching Exception in thread "Thread-6" java.lang.IllegalStateException: Not on FX application thread; currentThread = Thread-6
+			}
 			
 			i++;
 			updateMessage(i + "/" + videoCount);

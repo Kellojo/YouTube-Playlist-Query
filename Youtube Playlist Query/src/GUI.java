@@ -5,6 +5,8 @@ import Runnables.PlaylistListViewFillerRunnable;
 import Runnables.PlaylistQueryRunnable;
 import Utility.Format;
 import Utility.GuiUtility;
+import Utility.LocalPlaylistManager;
+import Utility.Settings;
 import Utility.VideoListCell;
 import Youtube.Playlist;
 import Youtube.Video;
@@ -36,26 +38,28 @@ import javafx.util.Duration;
 
 public class GUI {
 
-	public static final String author = "Kellojo";
-	public static final String appName = "YouTube Playlist Query";
-	public static final String defaultFont = "Roboto";
-	public static final String version = "v3.0";
-	public static final int appWidth = 700;
-	public static final int appHeight = 400;
+	public static String _author;
+	public static String _appName;
+	public static String _defaultFont;
+	public static String _version;
+	public static int _appWidth;
+	public static int _appHeight;
+	public static Format[] _renameFormats;
 
 	public static final Insets insets_trbl = new Insets(10, 10, 10, 10);
 	public static final Insets insets_half_trbl = new Insets(5, 5, 5, 5);
 
 	private Stage primaryStage;
-	private String path = "";
 	private YouTubeAPIKey APIKey;
 	private Playlist currentPlaylist;
+	private LocalPlaylistManager localPlaylist;
 
 	private Label lbl_heading;
 	private ListView<Video> lv_videos;
 	private TextField tf_PlaylistID;
 	private TextField tf_APIKey;
 	private ComboBox<Format> cb_FileFormat;
+	private Label lbl_curPath;
 
 	private Button btn_ExtractVideos;
 	private Button btn_renameVideos;
@@ -65,22 +69,32 @@ public class GUI {
 	private boolean isInProgress = false;
 
 
-	public GUI() {
+	public GUI(String author, String appName, String defaultFont, String version, int appWidth, int appHeight, Format[] renameFormats) {
+		_author = author;
+		_appName = appName;
+		_defaultFont = defaultFont;
+		_version = version;
+		_appWidth = appWidth;
+		_appHeight = appHeight;
+		_renameFormats = renameFormats;
+		
+		
 		primaryStage = new Stage();
 
 		BorderPane bp = buildGUI();
-		primaryStage.setTitle(appName + " by " + author + " (" + version + ")");
-		primaryStage.setScene(new Scene( bp, appWidth, appHeight));
+		primaryStage.setTitle(_appName + " by " + _author + " (" + _version + ")");
+		primaryStage.setScene(new Scene( bp, _appWidth, _appHeight));
 		primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("Save.png")));
 		primaryStage.show();
+		
+		onAfterInitialRendering();
 	}
-
 	private BorderPane buildGUI() {
 		BorderPane bp = new BorderPane();
 
 		/* Heading */
-		lbl_heading = new Label(appName);
-		lbl_heading.setFont(new Font(defaultFont, 26));
+		lbl_heading = new Label(_appName);
+		lbl_heading.setFont(new Font(_defaultFont, 26));
 		lbl_heading.setPadding(insets_trbl);
 		bp.setTop(lbl_heading);
 
@@ -98,8 +112,7 @@ public class GUI {
 			center.getChildren().add(gp);
 
 
-			Label lbl_PlaylistID = new Label("Playlist ID:");
-			GridPane.setHgrow(lbl_PlaylistID, Priority.ALWAYS);
+			Label lbl_PlaylistID = createStandardLabel("Playlist ID:", "");
 			gp.add(lbl_PlaylistID, 0, 0);
 
 			tf_PlaylistID = new TextField();
@@ -111,7 +124,7 @@ public class GUI {
 				}
 			});
 			GridPane.setColumnSpan(tf_PlaylistID, 2);
-			GridPane.setHgrow(tf_PlaylistID, Priority.ALWAYS);
+			GridPane.setHgrow(tf_PlaylistID, Priority.SOMETIMES);
 			tf_PlaylistID.setPadding(insets_half_trbl);
 			gp.add(tf_PlaylistID, 1, 0);
 			
@@ -127,11 +140,10 @@ public class GUI {
 				}
 			});
 
-			Label lbl_APIKey = new Label("YouTube API Key:");
-			GridPane.setHgrow(lbl_APIKey, Priority.ALWAYS);
+			Label lbl_APIKey = createStandardLabel("YouTube API Key:", "");
 			gp.add(lbl_APIKey, 0, 1);
 
-			tf_APIKey = new TextField("AIzaSyDSs6VwJdOUUyoSYN4ZZcd0PlzsHobqfDE");
+			tf_APIKey = new TextField();
 			tf_APIKey.setTooltip(new Tooltip("The api key for the YouTube api v3. If you don't have one, just stick with the default api key. However if to many people use this key at the same time it may be temporarily disabled by YouTube."));
 			tf_APIKey.setOnKeyReleased(new EventHandler<KeyEvent>(){
 				@Override
@@ -140,17 +152,15 @@ public class GUI {
 				}
 			});
 			GridPane.setColumnSpan(tf_APIKey, 2);
-			GridPane.setHgrow(tf_APIKey, Priority.ALWAYS);
+			GridPane.setHgrow(tf_APIKey, Priority.SOMETIMES);
 			GuiUtility.SetNodeToFillGridPaneHorizontally(tf_APIKey);
 			tf_APIKey.setPadding(insets_half_trbl);
 			gp.add(tf_APIKey, 1, 1);		
 			
-			Label lbl_Path = new Label("Path:");
-			lbl_Path.setTooltip(new Tooltip("The path to save the ids or look for already downloaded videos."));
+			Label lbl_Path = createStandardLabel("Path:", "The path to save the ids or look for already downloaded videos.");
 			gp.add(lbl_Path, 0, 2);
 
-			Label lbl_curPath = new Label("No Directory selected");
-			GridPane.setHgrow(lbl_curPath, Priority.ALWAYS);
+			lbl_curPath = createStandardLabel("No Directory selected", "");
 			gp.add(lbl_curPath, 1, 2);
 
 			Button btn_Path = new Button("...");
@@ -162,15 +172,7 @@ public class GUI {
 					if (event.getEventType().toString().equals("ACTION")) {
 						DirectoryChooser directoryChooser = new DirectoryChooser();
 		                File selectedDirectory = directoryChooser.showDialog(primaryStage);
-
-		                if(selectedDirectory == null && path.trim().equals("")){
-		                	lbl_curPath.setText("No Directory selected");
-		                	path = "";
-		                }else{
-		                	lbl_curPath.setText(selectedDirectory.getAbsolutePath());
-		                	path = selectedDirectory.getAbsolutePath() + "\\";
-		                	tryVideoFileQuery();
-		                }
+		                validateChoosenFolder(selectedDirectory);
 					}
 				}
 			});
@@ -189,20 +191,12 @@ public class GUI {
 
 			
 			
-			Label lbl_FileFormat = new Label("Rename format: ");
-			GridPane.setHgrow( lbl_FileFormat, Priority.ALWAYS);
+			Label lbl_FileFormat = createStandardLabel("Rename format: ", "");
 			gp.add( lbl_FileFormat, 0, 3);
 
 			cb_FileFormat = new ComboBox<Format>();
 			cb_FileFormat.setTooltip(new Tooltip("Select the format that fits your needs. This format is applied to the files when you click the 'Rename Videos in Folder (adds Playlist Index)' button."));
-			cb_FileFormat.getItems().addAll(
-				new Format("%PIND - %T", "'Playlist Index' - 'Title'"),
-				new Format("%T - %PIND", "'Title' - 'Playlist Index'"),
-				new Format("%ID", "'Video id'"),
-				new Format("%PIND - %ID", "'Playlist Index' - 'Video id'"),
-				new Format("%ID - %CID", "'Video id' - 'Chanel id'"),
-				new Format("%PIND - %ID - %CID", "'Playlist Index' - 'Video id' - 'Chanel id'")
-			);
+			cb_FileFormat.getItems().addAll(_renameFormats);
 
 			cb_FileFormat.getSelectionModel().select(0);
 			GridPane.setColumnSpan(cb_FileFormat, 2);
@@ -265,10 +259,9 @@ public class GUI {
 			lv_videos.setCellFactory(param -> new VideoListCell());
 			lv_videos.setMaxWidth(Double.MAX_VALUE);
 			lv_videos.setMinWidth(300);
-			HBox.setHgrow( lv_videos, Priority.ALWAYS);
+			HBox.setHgrow( lv_videos, Priority.SOMETIMES);
 			center.getChildren().add(lv_videos);
 
-		startUpdateTimeline();
 		return bp;
 	}
 
@@ -313,12 +306,11 @@ public class GUI {
 		if (APIKey == null || currentPlaylist == null || isInProgress) {
 			return;
 		}
-		if (path.trim().equals("") || !APIKey.isValid() || !currentPlaylist.isValidated()) {
+		if (!localPlaylist.isValid() || !APIKey.isValid() || !currentPlaylist.isValidated()) {
 			return;
 		}
 
-		File dir = new File(path);
-		currentPlaylist.FindVideosOnDisk(dir);
+		currentPlaylist.FindVideosOnDisk(localPlaylist.getLocation());
 
 		//update list view to show the found paths too
 		lv_videos.getItems().clear();
@@ -386,10 +378,33 @@ public class GUI {
 		if (playlist.isValidated()) {
 			currentPlaylist = playlist;
 			FillListViewWithVideos(playlist, APIKey);
+			
+			//update last used inputs
+			Settings.setLastUsedApiKey(APIKey.getKey());
+			Settings.setLastUsedPlaylistID(playlist.getId());
 		}
 	}
-
-
+	/* Validates the selected folder */
+	private void validateChoosenFolder(File selectedDirectory) {
+		if(localPlaylist.UpdateLocation(selectedDirectory)){
+        	tryVideoFileQuery();
+        }
+		
+		//update displayed label text
+		if (localPlaylist.isValid()) {
+			lbl_curPath.setText(localPlaylist.toString());
+		} else {
+			lbl_curPath.setText("No Directory selected");
+		}
+	}
+	
+	/* Called right after the initial rendering of the ui has been done,
+	 * Used as an setup function for loading all kinds of stuff
+	 */
+	private void onAfterInitialRendering() {
+		startUpdateTimeline();
+		LoadSettings();
+	}
 	/* Applies the progress and text to the status indicators */
 	private void startUpdateTimeline() {
 		Timeline fiveSecondsWonder = new Timeline(new KeyFrame(Duration.millis(100), new EventHandler<ActionEvent>() {
@@ -410,16 +425,43 @@ public class GUI {
 				lbl_heading.setText(currentPlaylist.getTitle() + " (" + currentPlaylist.getVideos().size() + " Videos)");
 			}
 		} else {
-			lbl_heading.setText(appName);
+			lbl_heading.setText(_appName);
 		}
 
 		//we got a valid playlist and a valid path or are currently proceccing something. Allow the buttons to be pressable!
-		SetDisableForActions(currentPlaylist == null || path.trim().equals("") || isInProgress);
+		SetDisableForActions(currentPlaylist == null || !localPlaylist.isValid() || isInProgress);
 		btn_ExtractVideos.setDisable(currentPlaylist == null || isInProgress);
 	}
 	/* Sets the disabled property for all buttons that pefrorm a certain action that should not be done in paralell */
 	private void SetDisableForActions(boolean isDisabled) {
 		btn_renameVideos.setDisable(isDisabled);
 		btn_ExtractMissingVideos.setDisable(isDisabled);
+	}
+
+	/* Loads the settings from disk and applies them to the ui fields */
+	private void LoadSettings() {
+		tf_PlaylistID.setText(Settings.getLastUsedPlaylistID());
+		tf_APIKey.setText(Settings.getLastUsedApiKey());
+		localPlaylist = new LocalPlaylistManager();
+		File file = new File(Settings.getLastUsedFileLocation());
+		localPlaylist.UpdateLocation(file);
+		
+		validateInput(tf_PlaylistID, tf_APIKey);
+		validateChoosenFolder(localPlaylist.getLocation());
+	}
+
+
+	// GUI Utilities ----------------------------------------------------------------------
+	
+	/* Creates a default label */
+	private static Label createStandardLabel(String text, String tooltip) {
+		tooltip = tooltip.trim();
+		Label label = new Label(text);
+		if (tooltip != "") {
+			label.setTooltip(new Tooltip("The path to save the ids or look for already downloaded videos."));
+		}
+		GridPane.setHgrow(label, Priority.ALWAYS);
+		label.setMinWidth(100);
+		return label;
 	}
 }
